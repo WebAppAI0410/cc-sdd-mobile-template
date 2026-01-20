@@ -46,6 +46,16 @@
 
 Design Phase後、Implementation前にモックアップで視覚的確認を推奨。
 
+### E2Eテスト (Maestro)
+
+| コマンド | 説明 |
+|----------|------|
+| `maestro test .maestro/` | 全E2Eテスト実行 |
+| `maestro studio` | インタラクティブUI起動 |
+| `maestro hierarchy` | 要素階層を確認 |
+
+`.maestro/flows/` にフローファイルを配置。
+
 ---
 
 ## 品質基準
@@ -80,6 +90,7 @@ npm test -- --passWithNoTests  # テスト全パス
     ui-mockup/        # UIモックアップ生成
     sdd-workflow/     # SDDワークフロー
     quality-check/    # 品質チェック
+    maestro-e2e/      # Maestro E2Eテスト
   commands/kiro/      # SDDコマンド
   agents/             # 専門エージェント
   rules/              # コーディングルール
