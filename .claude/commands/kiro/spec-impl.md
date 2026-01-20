@@ -1,110 +1,35 @@
 ---
-description: Execute spec tasks using TDD methodology
-allowed-tools: Bash, Read, Write, Edit, MultiEdit, Grep, Glob, LS, WebFetch, WebSearch
+description: "[非推奨] /impl-loop を使用してください"
+allowed-tools: Read
 argument-hint: <feature-name> [task-numbers]
 ---
 
-# Implementation Task Executor
+# /kiro:spec-impl (非推奨)
 
-<background_information>
-- **Mission**: Execute implementation tasks using Test-Driven Development methodology based on approved specifications
-- **Success Criteria**:
-  - All tests written before implementation code
-  - Code passes all tests with no regressions
-  - Tasks marked as completed in tasks.md
-  - Implementation aligns with design and requirements
-</background_information>
+> **⚠️ このコマンドは非推奨です。`/impl-loop` を使用してください。**
 
-<instructions>
-## Core Task
-Execute implementation tasks for feature **$1** using Test-Driven Development.
+## 移行ガイド
 
-## Execution Steps
+`/kiro:spec-impl` の機能は `/impl-loop` に統合されました。
 
-### Step 1: Load Context
+### 変更点
 
-**Read all necessary context**:
-- `.kiro/specs/$1/spec.json`, `requirements.md`, `design.md`, `tasks.md`
-- **Entire `.kiro/steering/` directory** for complete project memory
+| 旧コマンド | 新コマンド |
+|-----------|-----------|
+| `/kiro:spec-impl feature 1.1` | `/impl-loop feature 1.1` |
+| `/kiro:spec-impl feature` | `/impl-loop feature` |
 
-**Validate approvals**:
-- Verify tasks are approved in spec.json (stop if not, see Safety & Fallback)
+### `/impl-loop` の改善点
 
-### Step 2: Select Tasks
+1. **TDD統合**: Kent Beck のRED → GREEN → REFACTORサイクルを維持
+2. **レビューループ**: code-reviewer による自動レビュー
+3. **検証**: /kiro:validate-impl との連携
+4. **Steering読み込み**: .kiro/steering/ を自動参照
 
-**Determine which tasks to execute**:
-- If `$2` provided: Execute specified task numbers (e.g., "1.1" or "1,2,3")
-- Otherwise: Execute all pending tasks (unchecked `- [ ]` in tasks.md)
+## 自動転送
 
-### Step 3: Execute with TDD
+このコマンドを実行した場合、`/impl-loop $1 $2` を使用してください。
 
-For each selected task, follow Kent Beck's TDD cycle:
-
-1. **RED - Write Failing Test**:
-   - Write test for the next small piece of functionality
-   - Test should fail (code doesn't exist yet)
-   - Use descriptive test names
-
-2. **GREEN - Write Minimal Code**:
-   - Implement simplest solution to make test pass
-   - Focus only on making THIS test pass
-   - Avoid over-engineering
-
-3. **REFACTOR - Clean Up**:
-   - Improve code structure and readability
-   - Remove duplication
-   - Apply design patterns where appropriate
-   - Ensure all tests still pass after refactoring
-
-4. **VERIFY - Validate Quality**:
-   - All tests pass (new and existing)
-   - No regressions in existing functionality
-   - Code coverage maintained or improved
-
-5. **MARK COMPLETE**:
-   - Update checkbox from `- [ ]` to `- [x]` in tasks.md
-
-## Critical Constraints
-- **TDD Mandatory**: Tests MUST be written before implementation code
-- **Task Scope**: Implement only what the specific task requires
-- **Test Coverage**: All new code must have tests
-- **No Regressions**: Existing tests must continue to pass
-- **Design Alignment**: Implementation must follow design.md specifications
-</instructions>
-
-## Tool Guidance
-- **Read first**: Load all context before implementation
-- **Test first**: Write tests before code
-- Use **WebSearch/WebFetch** for library documentation when needed
-
-## Output Description
-
-Provide brief summary in the language specified in spec.json:
-
-1. **Tasks Executed**: Task numbers and test results
-2. **Status**: Completed tasks marked in tasks.md, remaining tasks count
-
-**Format**: Concise (under 150 words)
-
-## Safety & Fallback
-
-### Error Scenarios
-
-**Tasks Not Approved or Missing Spec Files**:
-- **Stop Execution**: All spec files must exist and tasks must be approved
-- **Suggested Action**: "Complete previous phases: `/kiro:spec-requirements`, `/kiro:spec-design`, `/kiro:spec-tasks`"
-
-**Test Failures**:
-- **Stop Implementation**: Fix failing tests before continuing
-- **Action**: Debug and fix, then re-run
-
-### Task Execution
-
-**Execute specific task(s)**:
-- `/kiro:spec-impl $1 1.1` - Single task
-- `/kiro:spec-impl $1 1,2,3` - Multiple tasks
-
-**Execute all pending**:
-- `/kiro:spec-impl $1` - All unchecked tasks
-
-think
+```
+/impl-loop $1 $2
+```

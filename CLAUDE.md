@@ -15,54 +15,110 @@
 ## セットアップ後のTODO
 
 1. このファイルをプロジェクト固有の内容に更新
-2. `.kiro/steering/design-system.md` にデザイントークンを定義
+2. `.kiro/steering/` にプロジェクト知識を定義
 3. `package.json` を作成（`npx create-expo-app` 等）
 
 ---
 
-## 仕様駆動開発 (SDD)
+## 開発ワークフロー（Boris Cherny流）
 
-### ワークフロー
+> "give Claude a way to verify its work. If Claude has that feedback loop, it will 2-3x the quality of the final result." - Boris Cherny
+
+### シンプルな場合（バグ修正、単純な変更）
+
 ```
-/kiro:spec-init → /kiro:spec-requirements → /kiro:spec-design → /kiro:spec-tasks → /kiro:spec-impl
+実装 → /verify → (/simplify) → コミット
 ```
 
-### 利用可能なコマンド
+### 複雑な場合（新機能、アーキテクチャ変更）
 
-| コマンド | 説明 |
-|----------|------|
-| `/kiro:spec-init` | 新しい仕様書を初期化 |
-| `/kiro:spec-requirements` | 要件を生成 |
-| `/kiro:spec-design` | 技術設計を作成 |
-| `/kiro:spec-tasks` | 実装タスクを生成 |
-| `/kiro:spec-impl` | TDDで実装を実行 |
-| `/kiro:spec-status` | 仕様書の状態を確認 |
+```
+┌────────────────────────────────────────────────────────────┐
+│  1. Plan Mode (Shift+Tab × 2)                              │
+│     └─ 計画を反復・ブラッシュアップ                         │
+│                                                            │
+│  2. 仕様駆動開発 (SDD)                                      │
+│     /kiro:spec-init → requirements → design → tasks        │
+│                                                            │
+│  3. 実装ループ                                              │
+│     /impl-loop <feature> [tasks]                           │
+│     ├─ TDD実装 (RED → GREEN → REFACTOR)                    │
+│     ├─ 品質チェック (tsc, test)                             │
+│     ├─ レビュー (code-reviewer)                            │
+│     └─ 検証 (/kiro:validate-impl)                          │
+│                                                            │
+│  4. 検証・簡潔化                                            │
+│     /verify → /simplify                                    │
+│                                                            │
+│  5. コミット                                                │
+│     コミット or /pr-workflow                                │
+└────────────────────────────────────────────────────────────┘
+```
+
+### いつ Plan Mode を使うか
+
+| 使う | スキップ |
+|------|---------|
+| 新機能実装 | バグ修正（単純） |
+| 複数ファイル変更 | タイポ修正 |
+| アーキテクチャ変更 | ドキュメント更新 |
+| 不明確な要件 | 明確な1行変更 |
+
+---
+
+## コマンド選択ガイド
+
+### 仕様駆動開発（SDD）
+
+| コマンド | 用途 | いつ使う |
+|---------|------|---------|
+| `/kiro:spec-init` | 仕様書初期化 | 新機能開始時 |
+| `/kiro:spec-requirements` | 要件定義 | 何を作るか明確化 |
+| `/kiro:spec-design` | 技術設計 | どう作るか設計 |
+| `/kiro:spec-tasks` | タスク分解 | 実装前の分解 |
+| `/kiro:spec-status` | 状態確認 | 進捗把握 |
+
+### 実装
+
+| コマンド | 用途 | いつ使う |
+|---------|------|---------|
+| `/impl-loop` | **TDD + レビューループ** | 仕様に基づく実装（**推奨**） |
+| `/kiro:spec-impl` | ~~TDD実装~~ | **非推奨**: `/impl-loop` を使用 |
+
+### 検証・品質
+
+| コマンド | 用途 | いつ使う |
+|---------|------|---------|
+| `/verify` | 全検証チェック | 実装後（tsc, lint, test, build） |
+| `/simplify` | コード簡潔化 | コミット前 |
+| `/kiro:validate-impl` | 仕様適合性検証 | `/impl-loop` 内で自動実行 |
+| `/kiro:validate-design` | 設計検証 | design.md 作成後 |
+
+### 開発・ビルド
+
+| コマンド | 用途 |
+|---------|------|
+| `/dev` | 開発サーバー起動 |
+| `/build` | EAS Build |
+| `/prebuild` | Expo prebuild |
+| `/typecheck` | TypeScript型チェック |
 
 ### UIモックアップ
 
-| コマンド | 説明 |
-|----------|------|
-| `/ui-mockup` | HTMLモックアップを生成してプレビュー |
+| コマンド | 用途 |
+|---------|------|
+| `/ui-mockup` | HTMLモックアップ生成・プレビュー |
 
 Design Phase後、Implementation前にモックアップで視覚的確認を推奨。
-
-### E2Eテスト (Maestro)
-
-| コマンド | 説明 |
-|----------|------|
-| `maestro test .maestro/` | 全E2Eテスト実行 |
-| `maestro studio` | インタラクティブUI起動 |
-| `maestro hierarchy` | 要素階層を確認 |
-
-`.maestro/flows/` にフローファイルを配置。
 
 ---
 
 ## 品質基準
 
 ### Warning/Error 0 ポリシー
+
 ```bash
-npx tsc --noEmit  # エラー 0 必須
+npx tsc --noEmit        # エラー 0 必須
 npm test -- --passWithNoTests  # テスト全パス
 ```
 
@@ -75,6 +131,14 @@ npm test -- --passWithNoTests  # テスト全パス
 | ハードコード日本語 | `t('key')` を使用 |
 | `console.log` 残存 | 削除 or `__DEV__` ガード |
 
+### TDD必須
+
+`/impl-loop` 使用時は Kent Beck の TDD サイクルに従う：
+
+1. **RED**: テストを先に書く（失敗することを確認）
+2. **GREEN**: 最小限のコードでテストを通す
+3. **REFACTOR**: コードを整理（テストは維持）
+
 ---
 
 ## ディレクトリ構造
@@ -83,15 +147,13 @@ npm test -- --passWithNoTests  # テスト全パス
 .kiro/
   specs/              # 機能別仕様書
   settings/           # SDDルール・テンプレート
-  steering/           # プロジェクト知識（デザインシステム等）
+  steering/           # プロジェクト知識
 
 .claude/
   skills/             # 利用可能なスキル
-    ui-mockup/        # UIモックアップ生成
-    sdd-workflow/     # SDDワークフロー
-    quality-check/    # 品質チェック
-    maestro-e2e/      # Maestro E2Eテスト
-  commands/kiro/      # SDDコマンド
+  commands/           # コマンド定義
+    impl-loop.md      # 実装ループ（TDD統合）
+    kiro/             # SDD コマンド
   agents/             # 専門エージェント
   rules/              # コーディングルール
 
@@ -103,12 +165,28 @@ src/                  # ソースコード（作成後）
 
 ---
 
-## Context7 MCP活用（必須）
+## 教訓の記録
 
-外部ライブラリ・ツールの使い方を調べる際は、推測せずcontext7 MCPで公式ドキュメントを確認すること。
+過去のインシデントから学んだ教訓をここに記録する：
 
-```
-1. mcp__context7__resolve-library-id でライブラリIDを取得
-2. mcp__context7__query-docs で具体的な使い方を検索
-3. 公式ドキュメントに基づいて回答
-```
+| 日付 | インシデント | 教訓 |
+|------|-------------|------|
+| - | - | - |
+
+### AIへの注意
+- **エアプ禁止**: 既存実装を確認せずに推測で回答しない
+- **存在確認**: ファイル・機能の有無は必ずコードベースで確認
+- **context7 MCP活用**: 外部ライブラリの使い方は推測せず、context7 MCPで公式ドキュメントを確認
+
+---
+
+## PostToolUse Hooks（自動化）
+
+グローバル `~/.claude/settings.json` に設定推奨：
+
+| Hook | 効果 |
+|------|------|
+| Prettier 自動フォーマット | 編集後に自動整形（CI失敗防止） |
+| console.log 警告 | 本番コードへの混入を検知 |
+
+> "auto-format code to prevent CI failures" - Boris Cherny
