@@ -113,7 +113,23 @@ requirements → [ユーザー承認] → design → [ユーザー承認] → ta
 
 ---
 
+## 自己完結型テンプレート
+
+**このテンプレートは自己完結型であり、グローバル環境への依存なしに動作します。**
+
+以下の全てがテンプレート内に含まれています:
+- 全コマンド (`.claude/commands/`)
+- 全エージェント (`.claude/agents/`)
+- 全スキル (`.claude/skills/`)
+- SDDルール・テンプレート (`.kiro/settings/`)
+
+グローバルの `~/.claude/` 設定がなくても、テンプレートをcloneするだけで即座にSDDワークフローを開始できます。
+
+---
+
 ## コマンド選択ガイド
+
+> **Note**: 以下の全コマンドはテンプレート内 `.claude/commands/` に含まれています。
 
 ### 仕様駆動開発（SDD）
 
@@ -179,7 +195,30 @@ Design Phase後、Implementation前にモックアップで視覚的確認を推
 | コマンド | 用途 |
 |---------|------|
 | `/commit-push-pr` | コミット → プッシュ → PR作成（一括実行） |
+| `/pr-workflow` | `/commit-push-pr` のエイリアス |
 | `/commit` | コミットのみ作成 |
+
+---
+
+## 利用可能なエージェント
+
+> **Note**: 以下の全エージェントはテンプレート内 `.claude/agents/` に含まれています。
+
+| エージェント | 用途 | いつ使う |
+|-------------|------|---------|
+| `rn-expert` | React Native実装 | RN/Expo固有の実装タスク |
+| `code-reviewer` | コードレビュー | `/impl-loop` 内で自動呼び出し |
+| `ui-reviewer` | UI一貫性レビュー | デザインシステム準拠の確認 |
+
+### エージェントの呼び出し方
+
+```bash
+# サブエージェントとして使用
+Task: rn-expert エージェントに FlatList 最適化を依頼
+
+# impl-loop 内では自動的に code-reviewer が呼び出される
+/impl-loop my-feature task-1
+```
 
 ---
 
@@ -220,11 +259,22 @@ npm test -- --passWithNoTests  # テスト全パス
   steering/           # プロジェクト知識
 
 .claude/
-  skills/             # 利用可能なスキル
-  commands/           # コマンド定義
+  skills/             # スキル（ui-mockup, quality-check等）
+  commands/           # コマンド定義（全コマンド含む）
     impl-loop.md      # 実装ループ（TDD統合）
-    kiro/             # SDD コマンド
-  agents/             # 専門エージェント
+    verify.md         # 検証コマンド
+    simplify.md       # 簡潔化コマンド
+    dev.md            # 開発サーバー起動
+    build.md          # EAS Build
+    prebuild.md       # Expo prebuild
+    typecheck.md      # TypeScript型チェック
+    codex-review.md   # Codexレビュー
+    commit-push-pr.md # PR作成ワークフロー
+    kiro/             # SDD コマンド（spec-*）
+  agents/             # 専門エージェント（全エージェント含む）
+    rn-expert.md      # React Native実装
+    code-reviewer.md  # コードレビュー
+    ui-reviewer.md    # UI一貫性レビュー
   rules/              # コーディングルール
 
 mockup/               # HTMLモックアップ出力先
@@ -250,9 +300,9 @@ src/                  # ソースコード（作成後）
 
 ---
 
-## PostToolUse Hooks（自動化）
+## PostToolUse Hooks（自動化・オプション）
 
-グローバル `~/.claude/settings.json` に設定推奨：
+グローバル `~/.claude/settings.json` に設定すると更に便利：
 
 | Hook | 効果 |
 |------|------|
@@ -260,3 +310,5 @@ src/                  # ソースコード（作成後）
 | console.log 警告 | 本番コードへの混入を検知 |
 
 > "auto-format code to prevent CI failures" - Boris Cherny
+
+**Note**: Hooksはオプションです。テンプレート自体はHooksなしでも動作します。
