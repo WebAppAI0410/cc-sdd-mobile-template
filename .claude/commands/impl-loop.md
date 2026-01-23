@@ -1,7 +1,7 @@
 ---
 description: TDD + 実装→レビュー→修正の強制ループを実行
 allowed-tools: Task, Read, Glob, Grep, Bash, Edit, Write
-argument-hint: <feature-name> [task-numbers]
+argument-hint: <feature-name> [task-numbers] [--with-codex]
 ---
 
 # 実装ループ（TDD統合版）
@@ -72,9 +72,18 @@ argument-hint: <feature-name> [task-numbers]
 # Phase 1 の複数タスクを実装
 /impl-loop intervention-system 1.1,1.2,1.3
 
+# Codex並列レビュー付きで実装
+/impl-loop intervention-system 1.1 --with-codex
+
 # 引数なしで対話的に選択
 /impl-loop
 ```
+
+### フラグオプション
+
+| フラグ | 説明 |
+|--------|------|
+| `--with-codex` | Codex CLI による並列レビューを有効化（Code Review, UI Consistency, Security） |
 
 ---
 
@@ -128,6 +137,43 @@ npm test -- --passWithNoTests
 ### Step 4: コードレビュー
 
 Task tool で code-reviewer を起動。
+
+### Step 4.5: Codex 並列レビュー（`--with-codex` フラグ時のみ）
+
+**`--with-codex` フラグが指定された場合**、Claude Code レビューと並列で Codex CLI を実行：
+
+```bash
+# 引数に --with-codex が含まれているか確認
+if [[ "$*" == *"--with-codex"* ]]; then
+  echo "🔍 Codex 並列レビューを開始..."
+
+  # バックグラウンドで3つのレビューを並列実行
+  codex exec "Code Review: 1) Run 'npx tsc --noEmit' 2) Find any type usages 3) Check React Hooks violations. Report in File:Line format." > /tmp/codex-code-review.txt 2>&1 &
+  PID1=$!
+
+  codex exec "UI Consistency: Check components against design system. Find hardcoded colors and spacing." > /tmp/codex-ui-review.txt 2>&1 &
+  PID2=$!
+
+  codex exec "Security Review: Check console.log guards and exposed secrets." > /tmp/codex-security-review.txt 2>&1 &
+  PID3=$!
+
+  # 全プロセスの完了を待機
+  wait $PID1 $PID2 $PID3
+
+  echo "✅ Codex レビュー完了"
+fi
+```
+
+**出力ファイル:**
+- `/tmp/codex-code-review.txt` - 型エラー、any使用、Hooks違反
+- `/tmp/codex-ui-review.txt` - ハードコード色・スペーシング
+- `/tmp/codex-security-review.txt` - セキュリティ問題
+
+**統合のメリット:**
+- Claude と Codex の異なる視点でレビュー
+- 型安全性、セキュリティ、UI一貫性を網羅的にチェック
+
+**フラグなしの場合:** Codex レビューはスキップされ、Claude レビューのみ実行。
 
 ### Step 5: 問題対応
 
