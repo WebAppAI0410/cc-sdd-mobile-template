@@ -190,6 +190,30 @@ requirements → [ユーザー承認] → design → [ユーザー承認] → ta
 
 Design Phase後、Implementation前にモックアップで視覚的確認を推奨。
 
+### Gemini モックアップ比較レビュー（推奨）
+
+Gemini 3 Flash を使用して理想UIモックアップとHTML実装を比較レビュー。
+
+```
+理想UI生成 → HTML実装 → Storybook並列表示 → Gemini比較レビュー → 修正
+```
+
+**スキル**: `.claude/skills/gemini-mockup-review.md`
+
+| 効果 | 詳細 |
+|------|------|
+| 定量的評価 | 再現率をパーセントで出力 |
+| 視覚的品質評価 | グロー効果、グラスモーフィズム等 |
+| 具体的指摘 | 修正すべき箇所を明示 |
+
+**使用例**:
+```bash
+# 1. 理想UIをGeminiで生成
+# 2. HTML実装を作成
+# 3. Playwrightでスクリーンショット取得
+# 4. Gemini 3 Flash APIで比較レビュー
+```
+
 ### Git・PR
 
 | コマンド | 用途 |
