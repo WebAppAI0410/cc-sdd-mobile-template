@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/settings-schema.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          "bash .claude/hooks/commit-guard.sh"
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write(src/**)",
+        "hooks": [
+          "bash .claude/hooks/impl-loop-guard.sh"
+        ]
+      },
+      {
+        "matcher": "Write(app/**)",
+        "hooks": [
+          "bash .claude/hooks/impl-loop-guard.sh"
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          "bash .claude/hooks/session-start-reminder.sh"
+        ]
+      }
+    ]
+  }
+}

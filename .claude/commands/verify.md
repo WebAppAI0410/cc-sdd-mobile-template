@@ -74,3 +74,17 @@ If any check fails:
 - After `/impl-loop`: automatically run `/verify`
 - After code changes: run `/verify --fix`
 - Before commit: run `/verify` as pre-commit check
+
+## Workflow Enforcement
+
+When all checks pass, create a marker file to allow commits:
+
+```bash
+# On successful verification, create marker
+touch "/tmp/.claude-verify-ran-$(date +%Y%m%d)"
+echo "✅ Verify marker created - commits now allowed"
+```
+
+This marker is checked by the commit-guard hook to ensure /verify was run before committing.
+
+**IMPORTANT**: Always run this command before committing. The commit-guard hook will BLOCK commits if /verify was not run.
