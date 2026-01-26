@@ -310,11 +310,53 @@ npm test -- --passWithNoTests  # テスト全パス
 
 ---
 
+## Specs ディレクトリ構造（重要）
+
+`.kiro/specs/` には機能ごとの仕様書を格納します。
+
+```
+.kiro/specs/
+└── <feature-name>/
+    ├── requirement.md    # 要件定義（なぜ作るか、何を作るか）
+    ├── design.md         # 設計（どう作るか）
+    └── tasks.md          # タスク分解（実装ステップ）
+```
+
+### 作成フロー
+
+```
+/kiro:spec-init → requirement.md
+       ↓
+/kiro:spec-design → design.md
+       ↓
+/kiro:spec-tasks → tasks.md
+       ↓
+/impl-loop で実装開始
+```
+
+### 例
+
+```
+.kiro/specs/
+├── authentication/
+│   ├── requirement.md
+│   ├── design.md
+│   └── tasks.md
+└── user-profile/
+    ├── requirement.md
+    ├── design.md
+    └── tasks.md
+```
+
+**注意**: 各機能は独立したディレクトリで管理。仕様書を更新したらtasks.mdも再生成すること。
+
+---
+
 ## ディレクトリ構造
 
 ```
 .kiro/
-  specs/              # 機能別仕様書
+  specs/              # 機能別仕様書（上記参照）
   settings/           # SDDルール・テンプレート
   steering/           # プロジェクト知識
 
