@@ -1,33 +1,50 @@
 {
-  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/settings-schema.json",
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash(git commit*)",
+        "matcher": "tool == \"Bash\" && tool_input.command matches \"git commit\"",
         "hooks": [
-          "bash .claude/hooks/commit-guard.sh"
-        ]
+          {
+            "type": "command",
+            "command": "#!/bin/bash\nMARKER=\"/tmp/.claude-verify-ran-$(date +%Y%m%d)\"\nif [ ! -f \"$MARKER\" ]; then\n  echo '[Hook] BLOCKED: /verify was not run today' >&2\n  echo '[Hook] Run /verify before committing' >&2\n  exit 1\nfi"
+          }
+        ],
+        "description": "Block commits without /verify"
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Write(src/**)",
+        "matcher": "tool == \"Write\" && tool_input.file_path matches \"(src|app)/.*\\.(ts|tsx)$\"",
         "hooks": [
-          "bash .claude/hooks/impl-loop-guard.sh"
-        ]
+          {
+            "type": "command",
+            "command": "#!/bin/bash\nIMPL_MARKER=\"/tmp/.claude-impl-loop-active\"\nif [ ! -f \"$IMPL_MARKER\" ]; then\n  echo '[Hook] WARNING: Writing impl code without /impl-loop' >&2\n  echo '[Hook] For new features, use: /impl-loop <feature> <tasks>' >&2\nfi"
+          }
+        ],
+        "description": "Warn when writing impl code without /impl-loop"
       },
       {
-        "matcher": "Write(app/**)",
+        "matcher": "tool == \"Edit\" && tool_input.file_path matches \"(src|app)/.*\\.(ts|tsx)$\"",
         "hooks": [
-          "bash .claude/hooks/impl-loop-guard.sh"
-        ]
+          {
+            "type": "command",
+            "command": "#!/bin/bash\nIMPL_MARKER=\"/tmp/.claude-impl-loop-active\"\nif [ ! -f \"$IMPL_MARKER\" ]; then\n  echo '[Hook] WARNING: Editing impl code without /impl-loop' >&2\n  echo '[Hook] For new features, use: /impl-loop <feature> <tasks>' >&2\nfi"
+          }
+        ],
+        "description": "Warn when editing impl code without /impl-loop"
       }
     ],
-    "SessionStart": [
+    "Stop": [
       {
+        "matcher": "",
         "hooks": [
-          "bash .claude/hooks/session-start-reminder.sh"
-        ]
+          {
+            "type": "command",
+            "command": "#!/bin/bash\necho '----------------------------------------' >&2\necho 'Session ending. Workflow reminders:' >&2\necho '- Did you run /verify before committing?' >&2\necho '- Did you use /impl-loop for new features?' >&2\necho '----------------------------------------' >&2"
+          }
+        ],
+        "description": "Remind workflow rules at session end"
       }
     ]
   }
