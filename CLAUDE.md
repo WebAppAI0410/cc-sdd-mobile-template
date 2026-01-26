@@ -50,7 +50,9 @@ mcp__plugin_claude-mem_mcp-search__search("project decisions lessons")
 |---------|------|-------------------|
 | spec-init | ✅ | 仕様書なしに実装開始禁止 |
 | spec-requirements | ✅ | 要件不明確なまま設計禁止 |
-| spec-design | ✅ | 設計なしに実装禁止 |
+| spec-design | ✅ | 設計なしにUI作成禁止 |
+| **ui-mockup** | ✅ | **UI確定なしにタスク分解禁止** |
+| **Gemini比較レビュー** | ✅ | **再現率70%未満でタスク分解禁止** |
 | spec-tasks | ✅ | タスク分解なしに実装禁止 |
 | impl-loop | ✅ | TDD + レビューを必ず通す |
 | verify | ✅ | 検証なしにコミット禁止 |
@@ -62,7 +64,7 @@ mcp__plugin_claude-mem_mcp-search__search("project decisions lessons")
 各フェーズでユーザー承認を取得してから次へ進む：
 
 ```
-requirements → [ユーザー承認] → design → [ユーザー承認] → tasks → [ユーザー承認] → impl
+requirements → [承認] → design → [承認] → ui-mockup → [Gemini 70%+] → tasks → [承認] → impl
 ```
 
 `-y` フラグは意図的なファストトラック時のみ使用。
@@ -121,19 +123,30 @@ requirements → [ユーザー承認] → design → [ユーザー承認] → ta
 │     └─ 計画を反復・ブラッシュアップ                         │
 │                                                            │
 │  2. 仕様駆動開発 (SDD)                                      │
-│     /kiro:spec-init → requirements → design → tasks        │
+│     /kiro:spec-init → requirements → design                │
 │                                                            │
-│  3. 実装ループ                                              │
+│  3. UIモックアップ & Gemini比較レビュー                      │
+│     /ui-mockup でRNコンポーネント + Storybook生成            │
+│     ├─ Storybookでプレビュー                                │
+│     ├─ Maestro/xcrun simctl でスクリーンショット            │
+│     ├─ Gemini 3 Flash で理想UIと比較レビュー                │
+│     └─ 再現率70%以上になるまで修正ループ                     │
+│                                                            │
+│  4. タスク分解                                              │
+│     /kiro:spec-tasks（UIが確定した状態で分解）              │
+│                                                            │
+│  5. 実装ループ                                              │
 │     /impl-loop <feature> [tasks]                           │
 │     ├─ TDD実装 (RED → GREEN → REFACTOR)                    │
 │     ├─ 品質チェック (tsc, test)                             │
 │     ├─ レビュー (code-reviewer)                            │
+│     ├─ Storybookコンポーネントを本番実装に活用              │
 │     └─ 検証 (/kiro:validate-impl)                          │
 │                                                            │
-│  4. 検証・簡潔化                                            │
+│  6. 検証・簡潔化                                            │
 │     /verify → /simplify                                    │
 │                                                            │
-│  5. コミット・PR                                            │
+│  7. コミット・PR                                            │
 │     /commit-push-pr                                        │
 └────────────────────────────────────────────────────────────┘
 ```
