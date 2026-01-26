@@ -2,8 +2,8 @@
 
 ## Description
 
-仕様書段階でHTMLモックアップを生成し、ブラウザでプレビューするスキル。
-ビルド不要で即座にUI検証が可能。
+仕様書段階でReact Nativeコンポーネントをstorybook形式で生成し、実機/シミュレーターでプレビューするスキル。
+実際のアプリと同じコンポーネントでUI検証が可能。
 
 ## Triggers
 
@@ -12,18 +12,39 @@ This skill should be used when the user asks to:
 - "UIプレビューを見せて"
 - "画面デザインを確認したい"
 - "仕様書のUIを視覚化"
+- "コンポーネントのStorybookを作成"
 - "/ui-mockup"
 
 ## Prerequisites
 
-1. **デザインシステム定義** (いずれか):
+1. **Storybookセットアップ** (初回のみ):
+   - `@storybook/react-native` がインストールされている
+   - `.storybook/` 設定が存在する
+   - package.jsonに `"storybook": "storybook-dev-server"` スクリプトがある
+
+2. **デザインシステム定義** (いずれか):
    - `src/design/theme.ts` が存在する
    - `.kiro/steering/design-system.md` が存在する
    - ユーザーがカラー/フォント情報を提供する
 
-2. **画面仕様** (いずれか):
+3. **画面仕様** (いずれか):
    - `.kiro/specs/{feature}/requirements.md` に画面要件がある
    - ユーザーが画面要件を口頭で説明する
+
+## Storybook Setup (初回のみ)
+
+Storybookがセットアップされていない場合:
+
+```bash
+# Storybook React Native をインストール
+npx sb@latest init --type react_native
+
+# 追加の依存関係
+npm install @storybook/addon-ondevice-controls @storybook/addon-ondevice-actions
+
+# package.json にスクリプト追加
+# "storybook": "STORYBOOK_ENABLED=true expo start"
+```
 
 ## Workflow
 
@@ -46,116 +67,240 @@ This skill should be used when the user asks to:
    - ボタン/インタラクション
 ```
 
-### Step 3: HTMLモックアップ生成
+### Step 3: React Nativeコンポーネント生成
 
 ```
-1. mockup/ ディレクトリを作成（なければ）
-2. 各画面のHTMLファイルを生成:
-   - インラインCSS（外部依存なし）
-   - モバイルビューポート (max-width: 390px)
-   - ダーク/ライトテーマ対応
+1. src/components/mockup/ ディレクトリを作成（なければ）
+2. 各画面のコンポーネントファイルを生成:
+   - {ScreenName}Mockup.tsx
+   - theme.ts からのデザイントークンを使用
+   - StyleSheet.create でスタイル定義
 ```
 
-### Step 4: ローカルサーバー起動
+### Step 4: Storybookストーリー生成
+
+```
+1. 対応する .stories.tsx ファイルを生成:
+   - {ScreenName}Mockup.stories.tsx
+   - 複数のバリエーション（light/dark、状態違い）
+   - args でプロパティを調整可能に
+```
+
+### Step 5: Storybookでプレビュー
 
 ```bash
-cd mockup && python3 -m http.server 8888
+# Storybookモードで起動
+npm run storybook
+
+# または Expo で直接起動
+STORYBOOK_ENABLED=true npx expo start
 ```
 
-### Step 5: ブラウザプレビュー
+### Step 6: スクリーンショット取得
 
 ```
-1. Chrome MCP で tabs_context_mcp を確認
-2. http://localhost:8888/{screen}.html にナビゲート
-3. スクリーンショットを取得してユーザーに表示
+1. シミュレーター/実機でStorybookを開く
+2. 対象のストーリーを選択
+3. Maestro または Chrome MCP でスクリーンショット取得
 ```
 
-## HTML Template Structure
+## React Native Component Template
 
-```html
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=390, initial-scale=1.0">
-    <title>{Screen Name} - Mockup</title>
-    <style>
-        :root {
-            /* Design tokens from theme.ts or steering */
-            --background: {colors.background};
-            --background-card: {colors.backgroundCard};
-            --text-primary: {colors.textPrimary};
-            --text-secondary: {colors.textSecondary};
-            --accent: {colors.accent};
-            --border: {colors.border};
-        }
+```tsx
+// src/components/mockup/{ScreenName}Mockup.tsx
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { theme } from '@/design/theme';
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background);
-            color: var(--text-primary);
-            max-width: 390px;
-            margin: 0 auto;
-            min-height: 100vh;
-        }
+interface {ScreenName}MockupProps {
+  // Props definition
+}
 
-        /* Component styles... */
-    </style>
-</head>
-<body>
-    <!-- Screen content -->
-</body>
-</html>
+export const {ScreenName}Mockup: React.FC<{ScreenName}MockupProps> = (props) => {
+  return (
+    <ScrollView style={styles.container}>
+      {/* Screen content */}
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  // Component styles using theme tokens
+  text: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.body.fontSize,
+  },
+  card: {
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginVertical: theme.spacing.sm,
+  },
+});
+```
+
+## Storybook Story Template
+
+```tsx
+// src/components/mockup/{ScreenName}Mockup.stories.tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import { {ScreenName}Mockup } from './{ScreenName}Mockup';
+
+const meta: Meta<typeof {ScreenName}Mockup> = {
+  title: 'Mockups/{ScreenName}',
+  component: {ScreenName}Mockup,
+  parameters: {
+    layout: 'fullscreen',
+  },
+  argTypes: {
+    // Props controls
+  },
+};
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {
+  args: {
+    // Default props
+  },
+};
+
+export const DarkMode: Story = {
+  args: {
+    // Dark mode props
+  },
+  parameters: {
+    backgrounds: { default: 'dark' },
+  },
+};
+
+export const WithData: Story = {
+  args: {
+    // Props with sample data
+  },
+};
 ```
 
 ## Common Components
 
 ### Card
-```html
-<div class="card">
-    <div class="card-icon">{emoji}</div>
-    <div class="card-content">
-        <h3>{title}</h3>
-        <p>{description}</p>
-    </div>
-</div>
+
+```tsx
+<View style={styles.card}>
+  <Text style={styles.cardIcon}>{emoji}</Text>
+  <View style={styles.cardContent}>
+    <Text style={styles.cardTitle}>{title}</Text>
+    <Text style={styles.cardDescription}>{description}</Text>
+  </View>
+</View>
 ```
 
 ### Button
-```html
-<button class="btn btn-primary">{label}</button>
-<button class="btn btn-outline">{label}</button>
+
+```tsx
+import { Pressable, Text, StyleSheet } from 'react-native';
+
+<Pressable style={styles.btnPrimary}>
+  <Text style={styles.btnPrimaryText}>{label}</Text>
+</Pressable>
+
+<Pressable style={styles.btnOutline}>
+  <Text style={styles.btnOutlineText}>{label}</Text>
+</Pressable>
 ```
 
 ### Bottom Navigation
-```html
-<nav class="bottom-nav">
-    <div class="nav-item active">
-        <svg>...</svg>
-        <span>{label}</span>
-    </div>
-    <!-- More items -->
-</nav>
+
+```tsx
+<View style={styles.bottomNav}>
+  <Pressable style={[styles.navItem, styles.navItemActive]}>
+    <IconComponent name="home" />
+    <Text style={styles.navLabel}>{label}</Text>
+  </Pressable>
+  {/* More items */}
+</View>
 ```
 
 ### Progress Bar
-```html
-<div class="progress-bar">
-    <div class="progress-fill" style="width: {percent}%"></div>
-</div>
+
+```tsx
+<View style={styles.progressBar}>
+  <View style={[styles.progressFill, { width: `${percent}%` }]} />
+</View>
+```
+
+## Screenshot Capture Methods
+
+### Method 1: Maestro (推奨)
+
+```yaml
+# .maestro/screenshot-mockup.yaml
+appId: com.yourapp.dev
+---
+- launchApp
+- tapOn: "Mockups"
+- tapOn: "{ScreenName}"
+- takeScreenshot: mockup-{screen-name}
+```
+
+```bash
+maestro test .maestro/screenshot-mockup.yaml
+```
+
+### Method 2: Chrome MCP (Web Storybook)
+
+Storybook Webビルドを使用する場合:
+
+```bash
+# Web版Storybookをビルド・起動
+npm run storybook:web
+```
+
+```
+1. Chrome MCP で tabs_context_mcp を確認
+2. http://localhost:6006 にナビゲート
+3. 対象ストーリーを選択
+4. スクリーンショットを取得
+```
+
+### Method 3: iOS Simulator Screenshot
+
+```bash
+xcrun simctl io booted screenshot mockup-screenshot.png
 ```
 
 ## Output
 
 モックアップ生成後、以下を報告:
 
-1. 生成したファイル一覧
-2. プレビューURL
-3. スクリーンショット（Chrome MCP経由）
-4. 変更リクエストの受付
+1. 生成したコンポーネントファイル一覧
+2. 生成したStorybookストーリー一覧
+3. Storybook起動コマンド
+4. スクリーンショット（取得した場合）
+5. 変更リクエストの受付
 
 ## Example Usage
 
 ```
 User: "ダッシュボード画面のモックアップを作成して"
+
+Claude:
+1. theme.ts からデザイントークンを読み込み
+2. 仕様書から画面要件を確認
+3. src/components/mockup/DashboardMockup.tsx を生成
+4. src/components/mockup/DashboardMockup.stories.tsx を生成
+5. Storybookでプレビュー起動
+6. スクリーンショット取得・表示
+```
+
+## Tips
+
+- コンポーネントは実際の実装に再利用可能な形で作成
+- Storybookのaddon-controlsでプロパティを動的に変更可能
+- 複数のバリエーション（状態、テーマ）をストーリーで網羅
+- デザイントークンは必ず theme.ts から参照（ハードコード禁止）

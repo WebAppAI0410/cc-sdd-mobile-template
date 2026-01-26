@@ -46,9 +46,11 @@ rm -rf .cc-sdd-temp
 
 | Skill | 説明 |
 |-------|------|
-| `/ui-mockup` | HTMLモックアップ生成・プレビュー |
+| `/ui-mockup` | React Native Storybookコンポーネント生成 |
 | `/quality-check` | TypeScript・テスト品質チェック |
 | `/impl-loop` | 実装→レビュー→修正ループ |
+| `rn-storybook-setup` | React Native Storybookセットアップガイド |
+| `gemini-mockup-review` | Gemini 3 Flashで理想UIとRN実装を比較レビュー |
 
 ### Agents
 
@@ -62,10 +64,19 @@ rm -rf .cc-sdd-temp
 ## ワークフロー
 
 ```
-[Requirements] → [Design] → [UI Mockup] → [Tasks] → [Implementation]
-     ↓              ↓            ↓            ↓            ↓
-  /spec-req     /spec-design  /ui-mockup  /spec-tasks  /spec-impl
+[Requirements] → [Design] → [RN Storybook] → [Tasks] → [Implementation]
+     ↓              ↓             ↓              ↓            ↓
+  /spec-req     /spec-design   /ui-mockup   /spec-tasks  /impl-loop
+                                   ↓
+                        [Gemini比較レビュー]
 ```
+
+### UIモックアップ → 本番実装の流れ
+
+1. `/ui-mockup` で React Native コンポーネント + Storybook ストーリーを生成
+2. Storybook でデバイス上にプレビュー
+3. Gemini 3 Flash で理想UIと比較レビュー
+4. `/impl-loop` で本番実装（Storybookコンポーネントを活用）
 
 ## ライセンス
 

@@ -218,20 +218,26 @@ requirements → [ユーザー承認] → design → [ユーザー承認] → ta
 | `/prebuild` | Expo prebuild |
 | `/typecheck` | TypeScript型チェック |
 
-### UIモックアップ
+### UIモックアップ（React Native Storybook）
 
 | コマンド | 用途 |
 |---------|------|
-| `/ui-mockup` | HTMLモックアップ生成・プレビュー |
+| `/ui-mockup` | React Native Storybookコンポーネント生成 |
 
-Design Phase後、Implementation前にモックアップで視覚的確認を推奨。
+Design Phase後、Implementation前にStorybookでコンポーネントを視覚的確認。生成したコンポーネントは本番実装でそのまま活用可能。
+
+**初回セットアップ**:
+```bash
+npx storybook@latest init
+npm run storybook:generate
+```
 
 ### Gemini モックアップ比較レビュー（推奨）
 
-Gemini 3 Flash を使用して理想UIモックアップとHTML実装を比較レビュー。
+Gemini 3 Flash を使用して理想UIモックアップとReact Native実装を比較レビュー。
 
 ```
-理想UI生成 → HTML実装 → Storybook並列表示 → Gemini比較レビュー → 修正
+理想UI生成 → RNコンポーネント実装 → Storybookプレビュー → Gemini比較レビュー → 修正
 ```
 
 **スキル**: `.claude/skills/gemini-mockup-review.md`
@@ -239,14 +245,14 @@ Gemini 3 Flash を使用して理想UIモックアップとHTML実装を比較�
 | 効果 | 詳細 |
 |------|------|
 | 定量的評価 | 再現率をパーセントで出力 |
-| 視覚的品質評価 | グロー効果、グラスモーフィズム等 |
+| 視覚的品質評価 | BlurView、shadow、LinearGradient等 |
 | 具体的指摘 | 修正すべき箇所を明示 |
 
 **使用例**:
 ```bash
 # 1. 理想UIをGeminiで生成
-# 2. HTML実装を作成
-# 3. Playwrightでスクリーンショット取得
+# 2. React Nativeコンポーネント + Storybookストーリー作成
+# 3. Maestro / xcrun simctl でスクリーンショット取得
 # 4. Gemini 3 Flash APIで比較レビュー
 ```
 
@@ -379,7 +385,8 @@ npm test -- --passWithNoTests  # テスト全パス
     ui-reviewer.md    # UI一貫性レビュー
   rules/              # コーディングルール
 
-mockup/               # HTMLモックアップ出力先
+.storybook/           # React Native Storybook設定
+screenshots/          # Gemini比較用スクリーンショット出力先
 
 app/                  # Expo Router画面（作成後）
 src/                  # ソースコード（作成後）
