@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "storybook-rn": {
-      "command": "npx",
-      "args": ["-y", "mcp-storybook@latest"]
-    }
-  }
-}
