@@ -1,24 +1,35 @@
 ---
-description: Codex CLI による並列コードレビューを実行し、統合レポートを生成
-allowed-tools: Bash, Read, Write
-argument-hint: [--code] [--ui] [--security] [--all]
+description: Codex CLI による反復レビューを実行し、ok: true まで自動修正→再レビューを繰り返す
+allowed-tools: Bash, Read, Write, Edit, Skill
+argument-hint: [--no-loop] [--code] [--ui] [--security] [--all]
 ---
 
-# Codex Code Review
+# Codex 反復レビュー
 
-Codex CLI を使用した自動コードレビューを実行します。
+Codex CLI (GPT-5.2) を使用した自動コードレビューを実行します。
 
 ## 概要
 
-Claude Code と並列で Codex による追加レビューを実行し、両者の結果を統合レポートとして出力します。
+**codex-review スキルを使用**して、Codexによるレビュー→Claude修正→再レビューの反復ループを実行し、`ok: true`になるまで自動的に問題を解消します。
+
+```
+[規模判定] → small:  diff ──────────────────→ [修正ループ]
+          → medium: arch → diff ───────────→ [修正ループ]
+          → large:  arch → diff並列 → cross-check → [修正ループ]
+
+[修正ループ] = Codexレビュー → ok: false → Claude修正 → 再レビュー（最大5回）
+```
 
 ## 使用方法
 
 ```bash
-# 全レビューを実行
-/codex-review --all
+# 反復レビューを実行（デフォルト）
+/codex-review
 
-# 特定のレビューのみ実行
+# 従来の単発レビュー（反復なし）
+/codex-review --no-loop
+
+# 特定の観点のみ（反復ループ付き）
 /codex-review --code       # コードレビューのみ
 /codex-review --ui         # UI一貫性レビューのみ
 /codex-review --security   # セキュリティレビューのみ
@@ -27,156 +38,158 @@ Claude Code と並列で Codex による追加レビューを実行し、両者�
 /codex-review --code --security
 ```
 
-## 実行手順
+### フラグオプション
 
-### Step 1: 引数解析
+| フラグ | 説明 |
+|--------|------|
+| `--no-loop` | 反復ループを無効化（従来の単発レビュー） |
+| `--code` | コードレビューのみ |
+| `--ui` | UI一貫性レビューのみ |
+| `--security` | セキュリティレビューのみ |
+| `--all` | 全カテゴリをレビュー（デフォルト） |
+
+## 実行フロー
+
+### Step 1: 規模判定
 
 ```bash
-RUN_CODE=false
-RUN_UI=false
-RUN_SECURITY=false
+git diff HEAD --stat
+git diff HEAD --name-status --find-renames
+```
 
-for arg in "$@"; do
-  case $arg in
-    --all)
-      RUN_CODE=true
-      RUN_UI=true
-      RUN_SECURITY=true
-      ;;
-    --code) RUN_CODE=true ;;
-    --ui) RUN_UI=true ;;
-    --security) RUN_SECURITY=true ;;
-  esac
-done
+| 規模 | 基準 | 戦略 |
+|-----|------|-----|
+| small | ≤3ファイル、≤100行 | diff |
+| medium | 4-10ファイル、100-500行 | arch → diff |
+| large | >10ファイル、>500行 | arch → diff並列 → cross-check |
 
-# デフォルトは --all
-if [[ "$RUN_CODE" == "false" && "$RUN_UI" == "false" && "$RUN_SECURITY" == "false" ]]; then
-  RUN_CODE=true
-  RUN_UI=true
-  RUN_SECURITY=true
+### Step 2: Codex 反復レビュー
+
+**codex-review スキルを使用**して反復レビューを実行：
+
+```bash
+# --no-loop が指定されていなければ反復レビュー
+if [[ "$*" != *"--no-loop"* ]]; then
+  # codex-review スキルを使用
+  # ok: true まで最大5回反復
 fi
 ```
 
-### Step 2: Codex レビューを並列実行
+**Codex実行コマンド:**
+```bash
+codex exec --sandbox read-only "<PROMPT>"
+```
 
-以下のコマンドを Bash tool で実行:
+### Step 3: 修正ループ
+
+`ok: false`の場合、以下を最大5回繰り返す：
+
+1. Codexの`issues`を解析 → 修正計画
+2. Claude Codeが修正（最小差分のみ）
+3. テスト/リンタ実行
+4. Codexに再レビュー依頼
+
+**停止条件:**
+- `ok: true`
+- max_iters（5回）到達
+- テスト2回連続失敗
+
+### Step 4: 統合レポート生成
+
+```markdown
+## Codexレビュー結果
+- 規模: medium（6ファイル、280行）
+- 反復: 2/5 / ステータス: ok
+
+### 修正履歴
+- auth.ts: 認可チェック追加
+- api.ts: エラーハンドリング改善
+
+### Advisory（参考）
+- utils.ts: 関数名がやや冗長、リファクタ推奨
+
+### 未解決（あれば）
+- なし
+```
+
+## Codex出力スキーマ
+
+```json
+{
+  "ok": true,
+  "phase": "arch|diff|cross-check",
+  "summary": "レビューの要約",
+  "issues": [
+    {
+      "severity": "blocking|advisory",
+      "category": "correctness|security|perf|maintainability|testing|style",
+      "file": "src/auth.ts",
+      "lines": "42-45",
+      "problem": "問題の説明",
+      "recommendation": "修正案"
+    }
+  ],
+  "notes_for_next_review": "次回レビューへのメモ"
+}
+```
+
+**severity:**
+- `blocking`: 修正必須。1件でも`ok: false`
+- `advisory`: 推奨・警告。`ok: true`でもレポートに記載
+
+## 従来モード（--no-loop）
+
+`--no-loop`フラグを指定すると、従来の単発レビューを実行：
 
 ```bash
 mkdir -p /tmp/codex-review
 
 # Code Review
-if [[ "$RUN_CODE" == "true" ]]; then
-  codex exec "Code Review:
-  1) Run 'npx tsc --noEmit' and report all TypeScript errors
-  2) Find all 'any' type usages with file and line numbers
-  3) Check for React Hooks violations
-  4) Find hardcoded Japanese text outside i18n
-  Format: File:Line - Issue - Severity (error/warning/info)" \
-  > /tmp/codex-review/code-review.txt 2>&1 &
-fi
+codex exec "Code Review:
+1) Run 'npx tsc --noEmit' and report all TypeScript errors
+2) Find all 'any' type usages with file and line numbers
+3) Check for React Hooks violations
+4) Find hardcoded Japanese text outside i18n
+Format: File:Line - Issue - Severity (error/warning/info)" \
+> /tmp/codex-review/code-review.txt 2>&1 &
 
 # UI Consistency Review
-if [[ "$RUN_UI" == "true" ]]; then
-  codex exec "UI Consistency Review:
-  Check all components in src/components/ against design system
-  Find:
-  1) Hardcoded colors not using useTheme()
-  2) Hardcoded spacing values (padding, margin, gap)
-  3) Inconsistent border radius usage
-  4) Non-theme typography
-  Format: File:Line - Issue" \
-  > /tmp/codex-review/ui-review.txt 2>&1 &
-fi
+codex exec "UI Consistency Review:
+Check all components against design system
+Find:
+1) Hardcoded colors not using useTheme()
+2) Hardcoded spacing values (padding, margin, gap)
+3) Inconsistent border radius usage
+4) Non-theme typography
+Format: File:Line - Issue" \
+> /tmp/codex-review/ui-review.txt 2>&1 &
 
 # Security Review
-if [[ "$RUN_SECURITY" == "true" ]]; then
-  codex exec "Security Review:
-  1) Run 'npm audit' to check vulnerabilities
-  2) Search for hardcoded secrets, API keys, or tokens
-  3) Check for sensitive data in console.log statements (missing __DEV__ guard)
-  4) Find exposed credentials in config files
-  Format: File:Line - Issue - Severity (high/medium/low)" \
-  > /tmp/codex-review/security-review.txt 2>&1 &
-fi
+codex exec "Security Review:
+1) Run 'npm audit' to check vulnerabilities
+2) Search for hardcoded secrets, API keys, or tokens
+3) Check for sensitive data in console.log statements (missing __DEV__ guard)
+4) Find exposed credentials in config files
+Format: File:Line - Issue - Severity (high/medium/low)" \
+> /tmp/codex-review/security-review.txt 2>&1 &
 
-# 全プロセスの完了を待機
 wait
 ```
 
-### Step 3: 統合レポート生成
-
-Read tool で各レビュー結果を読み込み、以下の形式でレポートを生成:
-
-```markdown
-# 🤖 Codex Review Report
-
-**実行日時**: YYYY-MM-DD HH:MM
-**対象**: プロジェクト
-
----
-
-## 📝 Code Review
-
-[/tmp/codex-review/code-review.txt の内容]
-
----
-
-## 🎨 UI Consistency Review
-
-[/tmp/codex-review/ui-review.txt の内容]
-
----
-
-## 🔒 Security Review
-
-[/tmp/codex-review/security-review.txt の内容]
-
----
-
-## 📊 Summary
-
-| カテゴリ | 問題数 | 重大度別 |
-|---------|--------|----------|
-| Code | N | error: X, warning: Y |
-| UI | N | warning: Y |
-| Security | N | high: X, medium: Y |
-
----
-
-*Generated by Codex CLI + Claude Code*
-```
-
-### Step 4: レポート保存
-
-レポートを以下の場所に保存:
-
-```bash
-# タイムスタンプ付きでレポート保存
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-REPORT_PATH="docs/reviews/codex-review-${TIMESTAMP}.md"
-
-# Write tool で保存
-```
-
-## 出力
-
-1. **コンソール出力**: レビューサマリー
-2. **ファイル出力**: `docs/reviews/codex-review-YYYYMMDD_HHMMSS.md`
-3. **一時ファイル**: `/tmp/codex-review/*.txt`（詳細結果）
-
 ## 統合ワークフロー
 
-`/impl-loop --with-codex` と連携して使用:
+`/impl-loop` と連携して使用（デフォルトで有効）:
 
 ```
-/impl-loop <feature> [tasks] --with-codex
+/impl-loop <feature> [tasks]
 ├─ Claude: TDD実装 + レビュー
-└─ Codex: /codex-review --all （並列実行）
-    ↓
-  統合レポート生成
+└─ Codex: codex-review スキル（反復ループ）
+    ├─ ok: false → Claude修正 → 再レビュー
+    └─ ok: true → 完了
 ```
 
 ## 注意事項
 
-- Codex CLI がインストール済みであること
+- Codex CLI がインストール済みであること（`codex --version`で確認）
 - ネットワーク接続が必要
+- 大規模変更（>500行）は並列処理で時間短縮

@@ -1,7 +1,7 @@
 ---
 description: TDD + 実装→レビュー→修正の強制ループを実行
-allowed-tools: Task, Read, Glob, Grep, Bash, Edit, Write
-argument-hint: <feature-name> [task-numbers] [--with-codex]
+allowed-tools: Task, Read, Glob, Grep, Bash, Edit, Write, Skill
+argument-hint: <feature-name> [task-numbers] [--no-codex]
 ---
 
 # 実装ループ（TDD統合版）
@@ -13,9 +13,12 @@ argument-hint: <feature-name> [task-numbers] [--with-codex]
 1. **TDD実装**（RED → GREEN → REFACTOR）
 2. **品質チェック**（tsc, lint, test）
 3. **レビュー**（code-reviewer）
-4. **検証**（/kiro:validate-impl）
+4. **Codex反復レビュー**（codex-review スキル使用、ok: true まで最大5回）
+5. **検証**（/kiro:validate-impl）
 
-**すべてのレビューをクリアするまで、1-3を繰り返します。**
+**すべてのレビューをクリアするまで、1-4を繰り返します。**
+
+> Note: Codex反復レビューはデフォルトで有効。`--no-codex` フラグで無効化可能。
 
 ---
 
@@ -49,13 +52,18 @@ argument-hint: <feature-name> [task-numbers] [--with-codex]
 │  4. コードレビュー                                       │
 │     └─ Task(code-reviewer): 品質・設計レビュー          │
 │                                                         │
-│  5. 問題があれば → 2に戻る                               │
-│     問題がなければ → 6へ                                 │
+│  5. Codex反復レビュー（デフォルト有効）                   │
+│     ├─ codex-review スキルを使用                         │
+│     ├─ ok: true まで最大5回反復                          │
+│     └─ --no-codex で無効化可能                           │
 │                                                         │
-│  6. 実装検証                                             │
+│  6. 問題があれば → 2に戻る                               │
+│     問題がなければ → 7へ                                 │
+│                                                         │
+│  7. 実装検証                                             │
 │     └─ /kiro:validate-impl <feature> <tasks>            │
 │                                                         │
-│  7. 完了報告                                             │
+│  8. 完了報告                                             │
 │     └─ tasks.md のチェックボックスを更新                 │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
@@ -66,14 +74,14 @@ argument-hint: <feature-name> [task-numbers] [--with-codex]
 ## 使用方法
 
 ```bash
-# Phase 1 の Task 1.1 を実装
+# Phase 1 の Task 1.1 を実装（Codex反復レビュー付き）
 /impl-loop intervention-system 1.1
 
 # Phase 1 の複数タスクを実装
 /impl-loop intervention-system 1.1,1.2,1.3
 
-# Codex並列レビュー付きで実装
-/impl-loop intervention-system 1.1 --with-codex
+# Codexレビューを無効化して実装（Claudeレビューのみ）
+/impl-loop intervention-system 1.1 --no-codex
 
 # 引数なしで対話的に選択
 /impl-loop
@@ -83,7 +91,8 @@ argument-hint: <feature-name> [task-numbers] [--with-codex]
 
 | フラグ | 説明 |
 |--------|------|
-| `--with-codex` | Codex CLI による並列レビューを有効化（Code Review, UI Consistency, Security） |
+| `--no-codex` | Codex反復レビューを無効化（Claudeレビューのみ実行） |
+| `--with-codex` | （互換性維持）Codexレビューを有効化（デフォルトで有効なので不要） |
 
 ---
 
@@ -138,42 +147,28 @@ npm test -- --passWithNoTests
 
 Task tool で code-reviewer を起動。
 
-### Step 4.5: Codex 並列レビュー（`--with-codex` フラグ時のみ）
+### Step 4.5: Codex 反復レビュー（デフォルト有効）
 
-**`--with-codex` フラグが指定された場合**、Claude Code レビューと並列で Codex CLI を実行：
+**デフォルトで有効**。`--no-codex` フラグで無効化可能。
 
-```bash
-# 引数に --with-codex が含まれているか確認
-if [[ "$*" == *"--with-codex"* ]]; then
-  echo "🔍 Codex 並列レビューを開始..."
+**codex-review スキルを使用**して反復レビューを実行：
 
-  # バックグラウンドで3つのレビューを並列実行
-  codex exec "Code Review: 1) Run 'npx tsc --noEmit' 2) Find any type usages 3) Check React Hooks violations. Report in File:Line format." > /tmp/codex-code-review.txt 2>&1 &
-  PID1=$!
+1. 規模判定（git diff --stat）
+2. Codexレビュー実行
+3. `ok: false` の場合 → Claude が修正 → 再レビュー（最大5回）
+4. `ok: true` になれば完了
 
-  codex exec "UI Consistency: Check components against design system. Find hardcoded colors and spacing." > /tmp/codex-ui-review.txt 2>&1 &
-  PID2=$!
-
-  codex exec "Security Review: Check console.log guards and exposed secrets." > /tmp/codex-security-review.txt 2>&1 &
-  PID3=$!
-
-  # 全プロセスの完了を待機
-  wait $PID1 $PID2 $PID3
-
-  echo "✅ Codex レビュー完了"
-fi
-```
-
-**出力ファイル:**
-- `/tmp/codex-code-review.txt` - 型エラー、any使用、Hooks違反
-- `/tmp/codex-ui-review.txt` - ハードコード色・スペーシング
-- `/tmp/codex-security-review.txt` - セキュリティ問題
+**停止条件:**
+- `ok: true`
+- max_iters（5回）到達
+- テスト2回連続失敗
 
 **統合のメリット:**
 - Claude と Codex の異なる視点でレビュー
 - 型安全性、セキュリティ、UI一貫性を網羅的にチェック
+- 反復ループで品質を収束
 
-**フラグなしの場合:** Codex レビューはスキップされ、Claude レビューのみ実行。
+**`--no-codex` フラグ指定時:** Codex レビューはスキップされ、Claude レビューのみ実行。
 
 ### Step 5: 問題対応
 
@@ -206,6 +201,7 @@ GO判定が出るまで修正を繰り返す。
 | TypeScript | `tsc --noEmit` エラー0 |
 | テスト | `npm test` 全PASS |
 | コードレビュー | 重大な問題なし |
+| Codexレビュー | `ok: true`（blocking issue なし） |
 | 要件充足 | validate-impl で GO |
 
 ### 推奨項目
