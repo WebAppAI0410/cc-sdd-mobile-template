@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "storybook-web": {
+      "command": "npx",
+      "args": ["-y", "storybook-mcp-server"],
+      "env": {
+        "STORYBOOK_URL": "http://localhost:6006"
+      }
+    },
+    "storybook-rn": {
+      "command": "npx",
+      "args": ["-y", "mcp-storybook@latest"]
+    }
+  }
+}
