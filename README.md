@@ -29,6 +29,7 @@ rm -rf .cc-sdd-temp
    ```bash
    npx create-expo-app@latest . --template expo-template-blank-typescript
    ```
+   - 既に `package.json` が存在するため、必要に応じて上書き or サブディレクトリ作成で回避
 
 ## 含まれるもの
 

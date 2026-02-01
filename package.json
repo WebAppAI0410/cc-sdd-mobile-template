@@ -1,0 +1,13 @@
+{
+  "name": "cc-sdd-mobile-template-tools",
+  "private": true,
+  "scripts": {
+    "docs:list": "tsx scripts/docs-list.ts",
+    "browser-tools": "tsx scripts/browser-tools.ts"
+  },
+  "devDependencies": {
+    "commander": "^11.1.0",
+    "puppeteer-core": "^22.15.0",
+    "tsx": "^4.19.2"
+  }
+}
